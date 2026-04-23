@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deepfake Detector AI</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="background-effects">
+        <div class="glow-orb orb-1"></div>
+        <div class="glow-orb orb-2"></div>
+        <div class="grid-overlay"></div>
+    </div>
+
+    <nav class="navbar">
+        <div class="logo">
+            <i class="fa-solid fa-shield-halved"></i>
+            <span>Aura<span>Shield</span></span>
+        </div>
+        <button id="settings-btn" class="icon-btn" title="API Settings">
+            <i class="fa-solid fa-gear"></i>
+        </button>
+    </nav>
+
+    <main class="container">
+        <header class="header-section">
+            <div class="badge">Advanced AI Detection</div>
+            <h1>Detect Deepfakes with <span class="text-gradient">Precision</span></h1>
+            <p>Upload a photo or video to our neural network for instant authenticity analysis. Powered by state-of-the-art vision models.</p>
+        </header>
+
+        <section class="upload-section" id="upload-section">
+            <div class="drop-zone" id="drop-zone">
+                <input type="file" id="file-input" accept="image/*, video/*" hidden>
+                <div class="drop-content">
+                    <div class="icon-container">
+                        <i class="fa-solid fa-cloud-arrow-up"></i>
+                    </div>
+                    <h3>Drag & Drop media here</h3>
+                    <p>or click to browse from your device</p>
+                    <span class="file-limits">Supports MP4, MOV, JPG, PNG (Max 50MB)</span>
+                </div>
+            </div>
+        </section>
+
+        <section class="analysis-section hidden" id="analysis-section">
+            <div class="media-preview-container">
+                <div class="scanner-overlay" id="scanner"></div>
+                <div id="preview-wrapper">
+                    <!-- Media preview injected here -->
+                </div>
+            </div>
+            
+            <div class="status-panel">
+                <h2 id="status-text">Scanning Media...</h2>
+                <div class="progress-bar-container">
+                    <div class="progress-bar" id="progress-bar"></div>
+                </div>
+                <p id="status-subtext">Analyzing pixel artifacts and temporal consistency...</p>
+            </div>
+        </section>
+
+        <section class="results-section hidden" id="results-section">
+            <div class="result-header">
+                <div class="result-badge" id="result-badge">
+                    <i class="fa-solid fa-check-circle"></i> Authentic
+                </div>
+                <div class="confidence-score">
+                    <svg viewBox="0 0 36 36" class="circular-chart">
+                        <path class="circle-bg"
+                            d="M18 2.0845
+                            a 15.9155 15.9155 0 0 1 0 31.831
+                            a 15.9155 15.9155 0 0 1 0 -31.831"
+                        />
+                        <path class="circle" id="confidence-circle"
+                            stroke-dasharray="0, 100"
+                            d="M18 2.0845
+                            a 15.9155 15.9155 0 0 1 0 31.831
+                            a 15.9155 15.9155 0 0 1 0 -31.831"
+                        />
+                        <text x="18" y="20.35" class="percentage" id="confidence-text">98%</text>
+                    </svg>
+                    <span>Confidence Score</span>
+                </div>
+            </div>
+
+            <div class="analysis-details">
+                <h3>Detailed Analysis Report</h3>
+                <div class="insight-cards" id="insight-cards">
+                    <!-- Insights injected here -->
+                </div>
+                
+                <div class="summary-box">
+                    <h4>AI Summary</h4>
+                    <p id="ai-summary">Waiting for analysis...</p>
+                </div>
+            </div>
+
+            <button class="primary-btn" id="reset-btn">
+                <i class="fa-solid fa-arrow-rotate-left"></i> Analyze Another File
+            </button>
+        </section>
+    </main>
+
+    <!-- Settings Modal -->
+    <div class="modal" id="settings-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>API Configuration</h3>
+                <button class="close-btn" id="close-settings"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body">
+                <p>To perform accurate real-time analysis, please provide your Gemini API key. Your key is stored locally in your browser.</p>
+                <div class="input-group">
+                    <label for="api-key">Gemini API Key</label>
+                    <input type="password" id="api-key" placeholder="AIzaSy...">
+                </div>
+                <button class="primary-btn" id="save-key-btn">Save Key</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Script -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
