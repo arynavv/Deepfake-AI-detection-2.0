@@ -1,4 +1,5 @@
 // Deepfake Detector AI - Main App Logic
+// Backend-connected version: Gemini calls are proxied via /api/analyze
 
 // DOM Elements
 const dropZone = document.getElementById('drop-zone');
@@ -23,18 +24,33 @@ const aiSummary = document.getElementById('ai-summary');
 const settingsBtn = document.getElementById('settings-btn');
 const settingsModal = document.getElementById('settings-modal');
 const closeSettingsBtn = document.getElementById('close-settings');
-const saveKeyBtn = document.getElementById('save-key-btn');
-const apiKeyInput = document.getElementById('api-key');
+const serverStatusDot = document.getElementById('server-status-dot');
+const serverStatusText = document.getElementById('server-status-text');
 
 // State
 let selectedFile = null;
 let currentMediaType = null;
-let GEMINI_API_KEY = localStorage.getItem('deepfake_gemini_api_key') || '';
+let serverOnline = false; // will be set after health-check
 
-// Initialize
-if (GEMINI_API_KEY) {
-    apiKeyInput.value = GEMINI_API_KEY;
+const API_BASE_URL = 'http://localhost:3000';
+
+// ── Server Health Check ──────────────────────────────────────────────────────
+async function checkServerHealth() {
+    try {
+        const res = await fetch(`${API_BASE_URL}/api/health`, { method: 'GET' });
+        const data = await res.json();
+        serverOnline = true;
+        if (serverStatusDot)  serverStatusDot.className  = 'status-dot online';
+        if (serverStatusText) serverStatusText.textContent = data.geminiConfigured
+            ? 'Backend connected — Gemini AI ready'
+            : 'Backend connected — ⚠️ GEMINI_API_KEY missing in .env';
+    } catch {
+        serverOnline = false;
+        if (serverStatusDot)  serverStatusDot.className  = 'status-dot offline';
+        if (serverStatusText) serverStatusText.textContent = 'Backend offline — running in Simulation Mode';
+    }
 }
+checkServerHealth();
 
 // Mouse glow effect on drop zone
 dropZone.addEventListener('mousemove', (e) => {
@@ -74,32 +90,12 @@ fileInput.addEventListener('change', (e) => {
 
 // Settings Modal Events
 settingsBtn.addEventListener('click', () => {
+    checkServerHealth(); // refresh status on open
     settingsModal.classList.add('active');
 });
 
 closeSettingsBtn.addEventListener('click', () => {
     settingsModal.classList.remove('active');
-});
-
-saveKeyBtn.addEventListener('click', () => {
-    const key = apiKeyInput.value.trim();
-    if (key) {
-        localStorage.setItem('deepfake_gemini_api_key', key);
-        GEMINI_API_KEY = key;
-        
-        // Show success state briefly
-        const originalText = saveKeyBtn.textContent;
-        saveKeyBtn.innerHTML = '<i class="fa-solid fa-check"></i> Saved';
-        saveKeyBtn.style.background = 'var(--success-color)';
-        
-        setTimeout(() => {
-            settingsModal.classList.remove('active');
-            setTimeout(() => {
-                saveKeyBtn.textContent = originalText;
-                saveKeyBtn.style.background = '';
-            }, 300);
-        }, 1000);
-    }
 });
 
 // Reset Button
@@ -137,13 +133,13 @@ function handleFile(file) {
     // Create preview
     createPreview(file);
     
-    // Check if running in simulation
-    if (!GEMINI_API_KEY) {
-        statusText.innerHTML = 'Scanning Media... <br><span style="font-size: 0.9rem; color: var(--danger-color); font-weight: normal;"><i class="fa-solid fa-triangle-exclamation"></i> Running in Simulation Mode. Add API Key in Settings for Real AI Analysis!</span>';
+    // Status banner — server-aware
+    if (!serverOnline) {
+        statusText.innerHTML = 'Scanning Media... <br><span style="font-size: 0.9rem; color: var(--danger-color); font-weight: normal;"><i class="fa-solid fa-triangle-exclamation"></i> Backend offline — running in Simulation Mode.</span>';
     } else {
         statusText.textContent = 'Scanning Media...';
     }
-    
+
     // Start Analysis Process
     startAnalysis();
 }
@@ -166,55 +162,115 @@ function createPreview(file) {
     }
 }
 
-async function startAnalysis() {
-    // Simulated scanning phases
-    const phases = [
-        { text: 'Extracting subject features...', subtext: 'Analyzing facial landmarks and geometry', progress: 15 },
-        { text: 'Analyzing temporal consistency...', subtext: 'Checking frame-to-frame coherency', progress: 35 },
-        { text: 'Detecting synthetic artifacts...', subtext: 'Scanning for GAN generated blending boundaries', progress: 60 },
-        { text: 'Evaluating lighting models...', subtext: 'Checking environmental reflections and shadows', progress: 85 },
-        { text: 'Finalizing neural confidence...', subtext: 'Computing final deep learning tensors', progress: 100 }
-    ];
-    
-    let currentPhase = 0;
-    
-    const interval = setInterval(() => {
-        if (currentPhase < phases.length) {
-            statusText.textContent = phases[currentPhase].text;
-            statusSubtext.textContent = phases[currentPhase].subtext;
-            progressBar.style.width = `${phases[currentPhase].progress}%`;
-            currentPhase++;
-        } else {
-            clearInterval(interval);
-            
-            // Proceed to results
-            setTimeout(() => {
-                showResults();
-            }, 800);
-        }
-    }, 1200); // 1.2s per phase
+// ── UI animation phases — resolves when the bar hits 100% ────────────────────
+function runScanningUI(phases, intervalMs = 1200) {
+    return new Promise(resolve => {
+        let i = 0;
+        const interval = setInterval(() => {
+            if (i < phases.length) {
+                statusText.textContent  = phases[i].text;
+                statusSubtext.textContent = phases[i].subtext;
+                progressBar.style.width = `${phases[i].progress}%`;
+                i++;
+            } else {
+                clearInterval(interval);
+                setTimeout(resolve, 600);
+            }
+        }, intervalMs);
+    });
 }
 
+async function startAnalysis() {
+    if (currentMediaType === 'video' && serverOnline) {
+        // ── Real video analysis: extract frames then call backend ────────────
+        statusText.textContent    = 'Extracting video frames...';
+        statusSubtext.textContent = 'Sampling keyframes for deep analysis';
+        progressBar.style.width   = '5%';
+
+        let frames;
+        try {
+            frames = await extractVideoFrames(selectedFile, 5);
+        } catch (e) {
+            console.error('Frame extraction failed:', e);
+            // fall through to simulated result
+            await runScanningUI([
+                { text: 'Analyzing temporal consistency...', subtext: 'Checking frame-to-frame coherency', progress: 40 },
+                { text: 'Finalizing neural confidence...', subtext: 'Computing final deep learning tensors', progress: 100 }
+            ], 1000);
+            showResults();
+            return;
+        }
+
+        // Animate progress while frames are being sent
+        statusText.textContent    = `Analyzing ${frames.length} keyframes with Gemini AI...`;
+        statusSubtext.textContent = 'Frame 1 of ' + frames.length + ' — detecting synthetic artifacts';
+        progressBar.style.width   = '20%';
+
+        // Show per-frame progress updates
+        const frameProgressStep = 60 / frames.length;
+        let framesDone = 0;
+        const frameProgressInterval = setInterval(() => {
+            if (framesDone < frames.length) {
+                framesDone++;
+                statusSubtext.textContent = `Frame ${framesDone} of ${frames.length} — evaluating authenticity signals`;
+                progressBar.style.width   = `${20 + frameProgressStep * framesDone}%`;
+            } else {
+                clearInterval(frameProgressInterval);
+            }
+        }, 1800);
+
+        let analysisResult;
+        try {
+            analysisResult = await analyzeVideoFrames(frames);
+        } catch (err) {
+            console.error('Video analysis error:', err);
+            analysisResult = generateSimulatedResult(selectedFile);
+        } finally {
+            clearInterval(frameProgressInterval);
+        }
+
+        progressBar.style.width = '100%';
+        statusText.textContent  = 'Analysis complete';
+        statusSubtext.textContent = '';
+
+        setTimeout(() => {
+            analysisSection.classList.add('hidden');
+            resultsSection.classList.remove('hidden');
+            renderResults(analysisResult);
+        }, 700);
+
+    } else {
+        // ── Image path (or offline): animated phases then showResults ─────────
+        const phases = [
+            { text: 'Extracting subject features...', subtext: 'Analyzing facial landmarks and geometry', progress: 15 },
+            { text: 'Analyzing temporal consistency...', subtext: 'Checking frame-to-frame coherency', progress: 35 },
+            { text: 'Detecting synthetic artifacts...', subtext: 'Scanning for GAN generated blending boundaries', progress: 60 },
+            { text: 'Evaluating lighting models...', subtext: 'Checking environmental reflections and shadows', progress: 85 },
+            { text: 'Finalizing neural confidence...', subtext: 'Computing final deep learning tensors', progress: 100 }
+        ];
+        await runScanningUI(phases);
+        showResults();
+    }
+}
+
+// showResults is now only called from the image/offline path (video handles its own rendering).
 async function showResults() {
     analysisSection.classList.add('hidden');
     resultsSection.classList.remove('hidden');
-    
+
     let analysisResult;
-    
-    if (GEMINI_API_KEY && currentMediaType === 'image') {
-        // Use real Gemini API for images if key is provided
+
+    if (serverOnline && currentMediaType === 'image') {
         try {
-            statusText.textContent = 'Calling Gemini Vision Model...';
-            analysisResult = await analyzeWithGemini(selectedFile);
+            analysisResult = await analyzeWithBackend(selectedFile);
         } catch (error) {
-            console.error("Gemini API Error:", error);
+            console.error('Backend analysis error:', error);
             analysisResult = generateSimulatedResult(selectedFile);
         }
     } else {
-        // Fallback to highly realistic simulation
         analysisResult = generateSimulatedResult(selectedFile);
     }
-    
+
     renderResults(analysisResult);
 }
 
@@ -258,88 +314,105 @@ function renderResults(result) {
     aiSummary.innerHTML = marked.parse(result.summary);
 }
 
-// Utility to convert file to base64
-function fileToGenerativePart(file) {
-    return new Promise((resolve) => {
-        const reader = new FileReader();
-        reader.onloadend = () => {
-            const base64Data = reader.result.split(',')[1];
-            resolve({
-                inlineData: {
-                    data: base64Data,
-                    mimeType: file.type
+// ── Extract N evenly-spaced frames from a video file ─────────────────────────
+function extractVideoFrames(file, frameCount = 5) {
+    return new Promise((resolve, reject) => {
+        const video  = document.createElement('video');
+        const url    = URL.createObjectURL(file);
+        video.src    = url;
+        video.muted  = true;
+        video.preload = 'auto';
+
+        video.addEventListener('error', () => reject(new Error('Video load failed')));
+
+        video.addEventListener('loadedmetadata', () => {
+            const duration = video.duration;
+            if (!duration || !isFinite(duration)) {
+                URL.revokeObjectURL(url);
+                return reject(new Error('Cannot determine video duration'));
+            }
+
+            // Place frames at 10%, 25%, 45%, 65%, 85% of the timeline
+            // This avoids the very start/end which can be black/transition frames
+            const positions = [0.10, 0.25, 0.45, 0.65, 0.85].slice(0, frameCount);
+            const timestamps = positions.map(p => p * duration);
+
+            const canvas  = document.createElement('canvas');
+            const ctx     = canvas.getContext('2d');
+            const blobs   = [];
+            let idx       = 0;
+
+            function seekNext() {
+                if (idx >= timestamps.length) {
+                    URL.revokeObjectURL(url);
+                    resolve(blobs);
+                    return;
                 }
+                video.currentTime = timestamps[idx];
+            }
+
+            video.addEventListener('seeked', function onSeeked() {
+                // Draw frame to canvas
+                canvas.width  = Math.min(video.videoWidth,  1280);
+                canvas.height = Math.min(video.videoHeight, 720);
+                // Maintain aspect ratio
+                const scale = Math.min(canvas.width / video.videoWidth, canvas.height / video.videoHeight);
+                const w = video.videoWidth  * scale;
+                const h = video.videoHeight * scale;
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.drawImage(video, (canvas.width - w) / 2, (canvas.height - h) / 2, w, h);
+
+                canvas.toBlob(blob => {
+                    if (blob) blobs.push(blob);
+                    idx++;
+                    seekNext();
+                }, 'image/jpeg', 0.88);
             });
-        };
-        reader.readAsDataURL(file);
+
+            // Kick off
+            seekNext();
+        });
     });
 }
 
-// Call actual Gemini API
-async function analyzeWithGemini(file) {
-    const model = 'gemini-1.5-pro';
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_API_KEY}`;
-    
-    const prompt = `You are an expert Media Authenticity AI. 
-    Analyze the image and determine if it is authentic or AI-generated.
-    
-    CRITICAL ANALYSIS:
-    1. Conceptual Plausibility: Are there highly dangerous, staged, or physically impossible scenarios?
-    2. Faces & Celebrities: When analyzing faces (like celebrities), real photos have natural skin textures, asymmetrical lighting, and slight imperfections. AI often makes skin look like plastic or messes up teeth and background depth.
-    3. Vehicles & Reflective Objects: AI-generated cars often have nonsensical text on license plates, physically impossible reflection curves, or completely flawless environments that look like a render. Real car photos have dirt, natural reflections, and imperfect backgrounds.
-    4. Textures & Blending: Check for overly smooth, "painterly", or plastic-like textures.
-    
-    Balance your judgment. Do not flag normal, slightly blurry, or naturally lit photos as fake. Immediately flag nonsensical text, impossible physics, and generative aesthetic hallmarks as fake.
+// ── Send frames to backend /api/analyze-video and return aggregated result ────
+async function analyzeVideoFrames(frameBlobs) {
+    const formData = new FormData();
+    frameBlobs.forEach((blob, i) => {
+        formData.append('frames', blob, `frame_${i}.jpg`);
+    });
 
-    Respond ONLY with a valid JSON object matching this exact structure:
-    {
-        "isFake": boolean (true if manipulated/AI, false if authentic),
-        "confidence": number (90 to 100),
-        "insights": [
-            {
-                "type": string ("warning" or "safe"),
-                "icon": string (e.g., "fa-solid fa-paw", "fa-solid fa-user", "fa-solid fa-camera"),
-                "title": string,
-                "description": string
-            }
-        ],
-        "summary": string (Professional summary explaining why it is authentic or fake. Use markdown.)
-    }
-    Provide exactly 3 insights. Do not include markdown codeblocks around the JSON, just the raw JSON text.`;
-
-    const imagePart = await fileToGenerativePart(file);
-
-    const requestBody = {
-        contents: [{
-            parts: [
-                { text: prompt },
-                imagePart
-            ]
-        }],
-        generationConfig: {
-            temperature: 0.1, // low temp for analytical output
-            topK: 32,
-            topP: 1
-        }
-    };
-
-    const response = await fetch(url, {
+    const response = await fetch(`${API_BASE_URL}/api/analyze-video`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(requestBody)
+        body: formData
     });
 
     if (!response.ok) {
-        throw new Error(`API returned ${response.status}`);
+        const err = await response.json().catch(() => ({ error: response.statusText }));
+        throw new Error(err.error || `Server returned ${response.status}`);
     }
 
     const data = await response.json();
-    let textResult = data.candidates[0].content.parts[0].text;
-    
-    // Clean up potential markdown formatting from the response
-    textResult = textResult.replace(/```json/g, '').replace(/```/g, '').trim();
-    
-    return JSON.parse(textResult);
+    return data.result;
+}
+
+// ── Backend API call (images) ─────────────────────────────────────────────────
+async function analyzeWithBackend(file) {
+    const formData = new FormData();
+    formData.append('media', file);
+
+    const response = await fetch(`${API_BASE_URL}/api/analyze`, {
+        method: 'POST',
+        body: formData
+    });
+
+    if (!response.ok) {
+        const err = await response.json().catch(() => ({ error: response.statusText }));
+        throw new Error(err.error || `Server returned ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data.result;
 }
 
 // Generate highly realistic simulation if API isn't available

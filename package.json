@@ -1,0 +1,29 @@
+{
+  "name": "deepfake-agent",
+  "version": "1.0.0",
+  "description": "Deepfake Detection refers to the process of identifying manipulated or AI-generated media, such as videos, images, or audio that pretend to be real. As deepfake technology becomes more advanced and accessible, detecting these fakes is crucial for preventing misinformation, fraud, identity abuse, and cybercrime.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/arynavv/Deepfake-AI-detection-2.0.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/arynavv/Deepfake-AI-detection-2.0/issues"
+  },
+  "homepage": "https://github.com/arynavv/Deepfake-AI-detection-2.0#readme",
+  "dependencies": {
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "multer": "^2.1.1",
+    "node-fetch": "^2.7.0"
+  }
+}

@@ -107,20 +107,23 @@
         </section>
     </main>
 
-    <!-- Settings Modal -->
+    <!-- Server Status Modal -->
     <div class="modal" id="settings-modal">
         <div class="modal-content">
             <div class="modal-header">
-                <h3>API Configuration</h3>
+                <h3><i class="fa-solid fa-server" style="color: var(--primary-color); margin-right: 0.5rem;"></i>Server Status</h3>
                 <button class="close-btn" id="close-settings"><i class="fa-solid fa-xmark"></i></button>
             </div>
             <div class="modal-body">
-                <p>To perform accurate real-time analysis, please provide your Gemini API key. Your key is stored locally in your browser.</p>
-                <div class="input-group">
-                    <label for="api-key">Gemini API Key</label>
-                    <input type="password" id="api-key" placeholder="AIzaSy...">
+                <div class="server-status-card">
+                    <span id="server-status-dot" class="status-dot"></span>
+                    <p id="server-status-text">Checking connection...</p>
                 </div>
-                <button class="primary-btn" id="save-key-btn">Save Key</button>
+                <p style="margin-top: 1.25rem; font-size: 0.85rem; color: var(--text-secondary); line-height: 1.6;">
+                    The Gemini API key is configured via the <code>.env</code> file on the server.
+                    Make sure the backend is running with <code>node server.js</code> and that
+                    <code>GEMINI_API_KEY</code> is set in your <code>.env</code> file.
+                </p>
             </div>
         </div>
     </div>
